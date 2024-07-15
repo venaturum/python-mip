@@ -249,6 +249,8 @@ else:
         int GRBdelconstrs (GRBmodel *model, int numdel, int *ind);
 
         int	GRBreset (GRBmodel *model, int clearall);
+
+        char * GRBgeterrormsg (GRBenv *env);
     """
     )
 
@@ -302,6 +304,7 @@ else:
     GRBsetstrattr = grblib.GRBsetstrattr
     GRBgetdblattrarray = grblib.GRBgetdblattrarray
     GRBreset = grblib.GRBreset
+    GRBgeterrormsg = grblib.GRBgeterrormsg
 
     GRB_CB_MIPSOL = 4
     GRB_CB_MIPNODE = 5
@@ -392,18 +395,21 @@ class SolverGurobi(Solver):
                     if isinstance(val, str):
                         st = GRBsetstrparam(self._env[0], key.encode("utf-8"), val.encode("utf-8"))
                         if st != 0:
+                            print("GurobiError:", ffi.string(GRBgeterrormsg(self._env[0])).decode("utf-8"))
                             raise ParameterNotAvailable(
                                 f"Could not set str parameter: {key}. Check parameter name. Check value type."
                             )
                     else:
                         st = GRBsetintparam(self._env[0], key.encode("utf-8"), val)
                         if st != 0:
+                            print("GurobiError:", ffi.string(GRBgeterrormsg(self._env[0])).decode("utf-8"))
                             raise ParameterNotAvailable(
                                 f"Could not set int parameter: {key}. Check parameter name. Check value type."
                             )
 
                 st = GRBstartenv(self._env[0])
                 if st != 0:
+                    print("GurobiError:", ffi.string(GRBgeterrormsg(self._env[0])).decode("utf-8"))
                     raise InterfacingError(
                         "Gurobi environment could not be started"
                     )
