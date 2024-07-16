@@ -352,7 +352,7 @@ class SolverGurobi(Solver):
 
     # class dictionary to facilitate setting of Gurobi's Flexible Licensing Key parameters
     # which are used in the __init__ method.
-    _FLK_params = {}
+    _env_params = {}
 
     def __init__(self, model: Model, name: str, sense: str, modelp: CData = ffi.NULL):
         """modelp should be informed if a model should not be created,
@@ -381,7 +381,7 @@ class SolverGurobi(Solver):
             self._ownsModel = True
             self._env = ffi.new("GRBenv **")
 
-            if self._FLK_params:
+            if self._env_params:
                 # The following is the only way in which environments relying on FLK licenses
                 # can be created.
 
@@ -391,27 +391,35 @@ class SolverGurobi(Solver):
                         "Could not start (empty) Gurobi environment."
                     )
                 
-                for key, val in self._FLK_params.items():
+                def _gurobi_param_error(param_type, key):
+                    gurobi_err_msg = ffi.string(GRBgeterrormsg(self._env[0])).decode("utf-8")
+                    return ParameterNotAvailable(
+                        f"GurobiError: {gurobi_err_msg}.\nCould not set {param_type} parameter: {key}. Check parameter name. Check value type."
+                    )
+                
+                for key, val in self._env_params.items():
                     if isinstance(val, str):
                         st = GRBsetstrparam(self._env[0], key.encode("utf-8"), val.encode("utf-8"))
                         if st != 0:
-                            print("GurobiError:", ffi.string(GRBgeterrormsg(self._env[0])).decode("utf-8"))
-                            raise ParameterNotAvailable(
-                                f"Could not set str parameter: {key}. Check parameter name. Check value type."
-                            )
-                    else:
+                            raise _gurobi_param_error("str", key)
+                    elif isinstance(val, int):
                         st = GRBsetintparam(self._env[0], key.encode("utf-8"), val)
                         if st != 0:
-                            print("GurobiError:", ffi.string(GRBgeterrormsg(self._env[0])).decode("utf-8"))
-                            raise ParameterNotAvailable(
-                                f"Could not set int parameter: {key}. Check parameter name. Check value type."
-                            )
+                            raise _gurobi_param_error("int", key)
+                    elif isinstance(val, float):
+                        st = GRBsetintparam(self._env[0], key.encode("utf-8"), val)
+                        if st != 0:
+                            raise _gurobi_param_error("float", key)
+                    else:
+                        raise ParameterNotAvailable(
+                            f"Unrecognized type ({type(val)}) for parameter value {key}. Supported types: str, int, float."
+                        )
 
                 st = GRBstartenv(self._env[0])
                 if st != 0:
-                    print("GurobiError:", ffi.string(GRBgeterrormsg(self._env[0])).decode("utf-8"))
+                    gurobi_err_msg = ffi.string(GRBgeterrormsg(self._env[0])).decode("utf-8")
                     raise InterfacingError(
-                        "Gurobi environment could not be started"
+                        f"GurobiError: {gurobi_err_msg}.\nGurobi environment could not be started"
                     )
             else:
                 # creating Gurobi environment
@@ -1592,13 +1600,13 @@ class SolverGurobiCB(SolverGurobi):
         return
     
 
-def set_flk_params(**kwargs):
+def set_env_params(**kwargs):
     # Gurobi offers a licensing method called FLK (Flexible Licensing Key)
     # Previously this was known as ISV.  This license requires parameters
     # to be set on an empty Gurobi environment.  Gurobi users with FLK
     # licenses will be instructed to use this method in order to be able
     # to use their license.
-    SolverGurobi._FLK_params = kwargs
+    SolverGurobi._env_params = kwargs
 
 
 class ModelGurobiCB(Model):
