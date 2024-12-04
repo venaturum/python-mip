@@ -110,9 +110,9 @@ else:
 
         GRBenv *GRBgetenv(GRBmodel *model);
 
-        int GRBloadenv(GRBenv **envP, const char *logfilename);
+        int GRBloadenvinternal(GRBenv **envP, const char *logfilename, int major, int minor, int tech);
 
-        int GRBemptyenv (GRBenv **envP);
+        int GRBemptyenvinternal(GRBenv **envP, int major, int minor, int tech);
     
         int GRBstartenv (GRBenv *env);
 
@@ -254,8 +254,8 @@ else:
     """
     )
 
-    GRBloadenv = grblib.GRBloadenv
-    GRBemptyenv = grblib.GRBemptyenv
+    GRBloadenvinternal = grblib.GRBloadenvinternal
+    GRBemptyenvinternal = grblib.GRBemptyenvinternal
     GRBstartenv = grblib.GRBstartenv
     GRBnewmodel = grblib.GRBnewmodel
     GRBfreeenv = grblib.GRBfreeenv
@@ -385,7 +385,7 @@ class SolverGurobi(Solver):
                 # The following is the only way in which environments relying on FLK licenses
                 # can be created.
 
-                st = GRBemptyenv(self._env)
+                st = GRBemptyenvinternal(self._env, 12, 0, 0)
                 if st != 0:
                     raise InterfacingError(
                         "Could not start (empty) Gurobi environment."
@@ -423,7 +423,7 @@ class SolverGurobi(Solver):
                     )
             else:
                 # creating Gurobi environment
-                st = GRBloadenv(self._env, "".encode("utf-8"))
+                st = GRBloadenvinternal(self._env, "".encode("utf-8"), 12, 0, 0)
                 if st != 0:
                     raise InterfacingError(
                         "Gurobi environment could not be loaded, check your license."
