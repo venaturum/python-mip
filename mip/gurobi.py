@@ -407,7 +407,7 @@ class SolverGurobi(Solver):
                         if st != 0:
                             raise _gurobi_param_error("int", key)
                     elif isinstance(val, float):
-                        st = GRBsetintparam(self._env[0], key.encode("utf-8"), val)
+                        st = GRBsetdblparam(self._env[0], key.encode("utf-8"), val)
                         if st != 0:
                             raise _gurobi_param_error("float", key)
                     else:
